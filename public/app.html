@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dear Future Self — your capsules</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/config.js"></script>
+</head>
+<body>
+  <div class="site">
+    <nav class="nav">
+      <a href="./index.html" class="brand" style="text-decoration:none;">Dear <em>Future Self</em></a>
+      <div class="links">
+        <span id="user-chip" class="muted small"></span>
+        <button class="btn btn-ghost" id="sign-out">Sign out</button>
+      </div>
+    </nav>
+
+    <div id="demo-banner" class="banner hidden">
+      <strong>Demo mode.</strong> You're running locally with in-browser storage.
+      Nothing is actually delivered. To enable real delivery, fill in
+      <code>public/js/config.js</code> with your Supabase URL + anon key
+      (see the README).
+    </div>
+
+    <!-- Top-level section tabs. Only rendered once signed in. -->
+    <div class="topnav hidden" id="topnav">
+      <button class="topnav-link active" data-section="capsules">Capsules</button>
+      <button class="topnav-link" data-section="pins">Pins</button>
+    </div>
+
+    <!-- AUTH VIEW -->
+    <section id="view-auth" class="view">
+      <div class="card" style="max-width:440px;margin:40px auto;">
+        <div class="eyebrow">Welcome</div>
+        <h2>Begin</h2>
+        <p class="muted small">Enter your email to sign in — we'll send you a magic link.</p>
+        <form id="auth-form" class="stack" style="margin-top:20px;">
+          <div class="field">
+            <label for="auth-email">Email</label>
+            <input type="email" id="auth-email" required autocomplete="email" />
+          </div>
+          <button class="btn btn-primary" id="auth-submit" type="submit" style="width:100%;">
+            Continue
+          </button>
+        </form>
+        <div id="auth-sent" class="hidden banner" style="margin-top:20px;">
+          Check your email for a sign-in link.
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view hidden">
+      <div class="row" style="margin-bottom:20px;">
+        <div>
+          <div class="eyebrow">Your capsules</div>
+          <h2 style="margin:4px 0 0;">What's in the mail</h2>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="new-capsule">+ New capsule</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="upcoming">Upcoming</button>
+        <button class="tab" data-tab="delivered">Delivered</button>
+        <button class="tab" data-tab="all">All</button>
+      </div>
+
+      <div id="capsule-list" class="capsule-list"></div>
+    </section>
+
+    <!-- COMPOSE -->
+    <section id="view-compose" class="view hidden">
+      <div class="row" style="margin-bottom:20px;">
+        <div>
+          <div class="eyebrow">New capsule</div>
+          <h2 style="margin:4px 0 0;">Write the note</h2>
+        </div>
+      </div>
+
+      <form id="compose-form" class="card stack">
+        <input type="hidden" id="compose-type" value="letter_self" />
+
+        <div class="field">
+          <label>Kind of capsule</label>
+          <div class="type-grid" id="type-picker">
+            <div class="type-tile active" data-type="letter_self">
+              <div class="icon">✎</div><div class="label">To myself</div>
+              <div class="sub">a letter</div>
+            </div>
+            <div class="type-tile" data-type="letter_other">
+              <div class="icon">✉</div><div class="label">To someone</div>
+              <div class="sub">friend / loved one</div>
+            </div>
+            <div class="type-tile" data-type="gesture">
+              <div class="icon">✿</div><div class="label">Gesture</div>
+              <div class="sub">a small prompt</div>
+            </div>
+            <div class="type-tile" data-type="experience">
+              <div class="icon">❋</div><div class="label">Remember</div>
+              <div class="sub">preferences / moments</div>
+            </div>
+            <div class="type-tile" data-type="micro_gift">
+              <div class="icon">✦</div><div class="label">Micro gift</div>
+              <div class="sub">pledge</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="title">Title <span class="muted small">(optional)</span></label>
+          <input type="text" id="title" placeholder="E.g. For the morning after a hard week" />
+        </div>
+
+        <div class="only-other hidden row-2">
+          <div class="field">
+            <label for="recipient-name">Recipient name</label>
+            <input type="text" id="recipient-name" placeholder="Their name" />
+          </div>
+          <div class="field">
+            <label for="recipient-email">Recipient email</label>
+            <input type="email" id="recipient-email" placeholder="them@example.com" />
+          </div>
+        </div>
+
+        <div class="only-gesture hidden field">
+          <label for="gesture-prompt">The gesture</label>
+          <input type="text" id="gesture-prompt" placeholder='E.g. "Call Mom" or "Take the long way home"' />
+          <div class="hint">One short line — this will show prominently in the email.</div>
+        </div>
+
+        <div class="only-gift hidden stack">
+          <div class="row-2">
+            <div class="field">
+              <label for="gift-amount">Pledge amount (USD)</label>
+              <input type="number" id="gift-amount" min="1" step="1" placeholder="20" />
+              <div class="hint">v1 is a pledge — the amount is shown in the delivery but no money moves.</div>
+            </div>
+            <div class="field">
+              <label for="gift-recipient">Recipient email <span class="muted small">(leave blank for yourself)</span></label>
+              <input type="email" id="gift-recipient" placeholder="them@example.com" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="gift-link">Link <span class="muted small">(optional)</span></label>
+            <input type="url" id="gift-link" placeholder="Gift card URL, playlist, photo, Venmo…" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="seal-note">What's going on in your life right now <span class="muted small">(optional, but the heart of it)</span></label>
+          <textarea id="seal-note" rows="3" placeholder="The mood of this moment. What you're worried about. What's beautiful right now."></textarea>
+          <div class="hint">This appears as a small quote in the delivery — the context that makes past-you real.</div>
+        </div>
+
+        <div class="field">
+          <label for="body">Message</label>
+          <textarea id="body" rows="10" required placeholder="Dear future me…"></textarea>
+          <div class="hint" id="body-hint">Speak to yourself. What do you want them to remember you said today?</div>
+        </div>
+
+        <div class="field">
+          <label for="deliver-at">Deliver on</label>
+          <input type="datetime-local" id="deliver-at" required />
+          <div class="hint">Local time. You can cancel any capsule before it's delivered.</div>
+        </div>
+
+        <div class="row end">
+          <button class="btn btn-ghost" id="compose-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="compose-submit" type="submit">Seal the capsule</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- READ SINGLE CAPSULE -->
+    <section id="view-capsule" class="view hidden">
+      <div id="capsule-full" class="card capsule-full"></div>
+    </section>
+
+    <!-- PINS LIST -->
+    <section id="view-pins" class="view hidden">
+      <div class="row" style="margin-bottom:20px;">
+        <div>
+          <div class="eyebrow">Preference pins</div>
+          <h2 style="margin:4px 0 0;">Things to remember next time</h2>
+          <p class="muted small" style="margin:6px 0 0;">A note about a place, a dish, a person — surfaced when you're nearby or when you search a tag.</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="new-pin">+ New pin</button>
+      </div>
+
+      <div id="nearby-strip" class="nearby-strip inactive">
+        <div class="dot"></div>
+        <div style="flex:1;">
+          <div class="small" id="nearby-status">Location not enabled — click to allow nearby detection.</div>
+        </div>
+        <button class="btn btn-secondary" id="enable-location">Enable location</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-pintab="nearby">Nearby</button>
+        <button class="tab" data-pintab="all">All</button>
+      </div>
+
+      <div class="field" id="tag-search-field">
+        <label for="tag-search">Search by tag or keyword</label>
+        <input type="text" id="tag-search" placeholder="e.g. noodles, dentist, my-mom, parking…" />
+      </div>
+
+      <div id="pin-list" class="capsule-list"></div>
+    </section>
+
+    <!-- PIN COMPOSE -->
+    <section id="view-pin-compose" class="view hidden">
+      <div class="row" style="margin-bottom:20px;">
+        <div>
+          <div class="eyebrow">New pin</div>
+          <h2 style="margin:4px 0 0;">Remember this detail</h2>
+        </div>
+      </div>
+
+      <form id="pin-form" class="card stack">
+        <div class="field">
+          <label for="pin-title">What to remember</label>
+          <input type="text" id="pin-title" required placeholder='E.g. "The mala noodles were great — avoid the spicy pork"' />
+        </div>
+
+        <div class="field">
+          <label>Feeling</label>
+          <div class="sentiment-row">
+            <div class="sentiment-opt active" data-sent="positive">✓ Liked it</div>
+            <div class="sentiment-opt" data-sent="neutral">• Just a note</div>
+            <div class="sentiment-opt" data-sent="negative">✗ Avoid</div>
+          </div>
+          <input type="hidden" id="pin-sentiment" value="positive" />
+        </div>
+
+        <div class="field">
+          <label for="pin-body">Details <span class="muted small">(optional)</span></label>
+          <textarea id="pin-body" rows="4" placeholder="Context so you'll know what to do next time. Order number, seat preference, dish name, etc."></textarea>
+        </div>
+
+        <div class="field">
+          <label>Tags</label>
+          <div class="chips" id="pin-chips">
+            <input type="text" id="pin-tag-input" placeholder="Type a tag and press enter…" />
+          </div>
+          <div class="hint">Tags let you find this pin later by keyword. Add as many as helpful.</div>
+        </div>
+
+        <div class="field">
+          <label for="pin-place-name">Place name <span class="muted small">(optional — needed for nearby alerts)</span></label>
+          <input type="text" id="pin-place-name" placeholder='E.g. "Golden Wok"' />
+        </div>
+
+        <div class="field">
+          <label for="pin-place-address">Address <span class="muted small">(optional, for your own reference)</span></label>
+          <input type="text" id="pin-place-address" placeholder="123 Main St, City" />
+        </div>
+
+        <div class="field">
+          <label>Location</label>
+          <div class="location-row">
+            <input type="text" id="pin-lat" placeholder="Latitude" readonly />
+            <input type="text" id="pin-lng" placeholder="Longitude" readonly />
+            <button type="button" class="btn btn-secondary" id="pin-use-current">Use my current location</button>
+          </div>
+          <div class="loc-status" id="pin-loc-status"></div>
+        </div>
+
+        <div class="field">
+          <label for="pin-radius">Trigger radius (meters)</label>
+          <input type="number" id="pin-radius" value="150" min="30" step="10" />
+          <div class="hint">How close you need to be before the pin fires. 150m ≈ a block or two.</div>
+        </div>
+
+        <div class="row end">
+          <button class="btn btn-ghost" id="pin-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="pin-submit" type="submit">Save pin</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- PIN DETAIL -->
+    <section id="view-pin" class="view hidden">
+      <div id="pin-full" class="card"></div>
+    </section>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>

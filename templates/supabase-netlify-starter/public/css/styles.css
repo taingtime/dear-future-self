@@ -1,0 +1,16 @@
+:root {
+  --bg: #f7f1e5; --ink: #3a2e1e; --accent: #c7a97a;
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family: Georgia, serif; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+.hidden { display: none; }
+h1 { font-size: 40px; }
+h2 { font-size: 28px; }
+input, button {
+  font: inherit; padding: 10px 12px; border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.1); background: #fffaf0;
+}
+button { cursor: pointer; background: var(--ink); color: #fffaf0; border: none; }
+form { display: flex; gap: 8px; }
+input { flex: 1; }
